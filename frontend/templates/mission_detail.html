@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex justify-between items-center mb-8">
+        <h2 class="text-3xl font-bold">Mission: {{ mission.title }}</h2>
+        <a href="/dashboard" class="text-blue-400 hover:underline">Back to Dashboard</a>
+    </div>
+
+    <div class="bg-gray-800 p-8 rounded-lg border border-gray-700 mb-8">
+        <p class="text-lg text-gray-300 mb-4">{{ mission.description }}</p>
+        <div class="bg-blue-900/20 p-4 rounded border border-blue-800">
+            <p class="font-bold mb-2">Base Points: <span class="text-blue-400">{{ mission.base_points }}</span></p>
+        </div>
+    </div>
+
+    <h3 class="text-2xl font-bold mb-4">Objectives</h3>
+    <div class="space-y-4">
+        {% for objective in mission.objectives %}
+        <div class="p-4 rounded-lg border border-gray-700 {% if objective.is_completed %}bg-green-900/20 border-green-800{% else %}bg-gray-800{% endif %}">
+            <div class="flex justify-between items-center">
+                <div>
+                    <span class="text-sm font-bold text-gray-500">Objective {{ loop.index }}</span>
+                    <p class="text-lg">{{ objective.description }}</p>
+                </div>
+                {% if objective.is_completed %}
+                <span class="px-3 py-1 bg-green-600 rounded-full text-xs">Completed</span>
+                {% else %}
+                <span class="px-3 py-1 bg-blue-600 rounded-full text-xs">Current</span>
+                {% endif %}
+            </div>
+            {% if not objective.is_completed %}
+            <div class="mt-4 flex space-x-4 text-sm text-gray-400">
+                <span>Requirements: {{ objective.requirements }}</span>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

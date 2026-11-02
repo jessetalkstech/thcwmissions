@@ -1,23 +1,25 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Upload Harvest</title>
-    <style>
-        body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; padding: 2rem; line-height: 1.6; }
-        .form-group { margin-bottom: 1rem; }
-        label { display: block; font-weight: bold; }
-    </style>
-</head>
-<body>
-    <h1>Upload Harvest</h1>
-    <p>Upload your screenshot to progress your mission.</p>
-    <form action="/harvest/upload" method="post" enctype="multipart/form-data">
-        <div class="form-group">
-            <label for="file">Screenshot:</label>
-            <input type="file" name="file" id="file" accept="image/*" required>
-        </div>
-        <button type="submit">Upload & Process</button>
-    </form>
+<body class=\"bg-gray-900 text-gray-100\">\
+    <nav class=\"bg-gray-800 border-b border-gray-700 p-4\">\
+        <div class=\"container mx-auto flex justify-between items-center\">\
+            <h1 class=\"text-xl font-bold\">thcwmissions</h1>\
+            <div class=\"space-x-4\">\
+                <a href=\"/\" class=\"hover:text-blue-400\">Dashboard</a>\
+                <a href=\"/leaderboard\" class=\"hover:text-blue-400\">Leaderboard</a>\
+                <a href=\"/logout\" class=\"text-red-400\">Logout</a>\
+            </div>\
+        </div>\
+    </nav>\n\n    <main class=\"container mx-auto mt-8 p-4 max-w-2xl\">\
+        <h1 class=\"text-3xl font-bold mb-4\">Upload Harvest</h1>\
+        <p class=\"mb-6 text-gray-300\">Upload your screenshot to progress your mission.</p>\
+        \
+        <form action=\"/harvest/upload\" method=\"post\" enctype=\"multipart/form-data\" class=\"bg-gray-800 p-6 rounded-lg border border-gray-700\">\
+            <div class=\"mb-4\">\
+                <label for=\"file\" class=\"block mb-2 font-bold\">Screenshot:</label>\
+                <input type=\"file\" name=\"file\" id=\"file\" accept=\"image/*\" required class=\"block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:bg-blue-600 file:text-white hover:file:bg-blue-700\">\
+            </div>\
+            <button type=\"submit\" class=\"bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded font-bold\">Upload & Process</button>\
+        </form>\
+    </main>\n\n    <footer class=\"mt-auto py-4 text-center text-gray-500 text-sm\">\
+        &copy; 2026 thcwmissions - Unofficial tracker for theHunter: Call of the Wild\
+    </footer>\
 </body>
-</html>

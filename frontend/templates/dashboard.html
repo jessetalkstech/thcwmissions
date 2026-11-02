@@ -13,9 +13,9 @@
         <p class="text-gray-400 mb-4">{{ mission_record.description | truncate(100) }}</p>
         
         <div class="bg-gray-900 p-4 rounded mb-4">
-            <p class="text-sm">Current Objective: <span class="text-blue-400">{{ mission_record.current_objective_id }}</span></p>
-            <div class="w-full bg-gray%900 h-2 rounded-full mt-2">
-                <div class="bg-blue-500 h-2 rounded-full" style="width: 50%;"></div>
+            <p class="text-sm">Progress: <span class="text-blue-400">{{ mission_record.progress }}%</span></p>
+            <div class="w-full bg-gray-900 h-2 rounded-full mt-2">
+                <div class="bg-blue-500 h-2 rounded-full" style="width: {{ mission_record.progress }}%;"></div>
             </div>
         </div>
 

@@ -106,7 +106,52 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
     from backend.app.models import UserMission
     result = await db.execute(select(UserMission).where(UserMission.status == "Active"))
     active_missions = result.scalars().all()
-    return templates.TemplateResponse(request=request, name="dashboard.html", context={"active_missions": active_missions})
+    
+    # To calculate progress, we might need a bit more info, but let's try to do it simply.
+    # Actually, we can just pass the objectives list for each mission_record.
+    
+    mission_data = []
+    for um in active_missions:
+        from sqlalchemy import select
+        from backend.app.models import Mission, Objective
+        
+        m_stmt = select(Mission).where(Mission.id == um.mission_id)
+        m_res = await db.execute(m_stmt)
+        mission = m_res.scalars().first()
+        
+        o_stmt = select(Objective).where(Objective.mission_id == um.mission_id).order_by(Objective.order_index.asc())
+        o_res = await db.execute(o_stmt)
+        objectives = o_res.scalars().all()
+        
+        # Find current objective index
+        current_obj_index = -1
+        if um.current_objective_id:
+            for i, obj in enumerate(objectives):
+                if obj.id == um.current_objective_id:
+                    current_obj_index = i
+                    break
+        
+        # Calculate progress percentage
+        if objectives:
+            # If objective index is 0, progress is 0% of the way through? 
+            # Or is it (index + 1) / total?
+            # Let's say if it's the first objective, progress is 0% (just started).
+            # If it's the last objective, progress is 100%? No, usually it's finished after completing last.
+            # Let's use (current_obj_index / len(objectives)) * 100
+            progress = (current_obj_index / len(objectives)) * 100
+        else:
+            progress = 100
+            
+        mission_data.append({
+            "id": um.id,
+            "title": mission.title,
+            "description": mission.description,
+            "current_objective_id": um.current_objective_id,
+            "progress": round(progress),
+            "mission": mission
+        })
+        
+    return templates.TemplateResponse(request=request, name="dashboard.html", context={"active_missions": mission_data})
 
 @router.get("/leaderboard", response_model=HTMLResponse)
 async def leaderboard(request: Request, db: AsyncSession = Depends(get_db)):
@@ -118,7 +163,15 @@ async def leaderboard(request: Request, db: AsyncSession = Depends(get_db)):
 
 @router.get("/mission/{mission_id}", response_model=HTMLResponse)
 async def mission_detail(request: Request, mission_id: int, db: AsyncSession = Depends(get_db)):
-    return templates.TemplateResponse(request=request, name="dashboard.html", context={"active_missions": []})
+    from sqlalchemy import select
+    from backend.app.models import Mission
+    stmt = select(Mission).where(Mission.id == mission_id)
+    res = await db.execute(stmt)
+    mission = res.scalars().first()
+    if not mission:
+        raise HTTPException(status_code=404, detail="Mission not found")
+
+    return templates.TemplateResponse(request=request, name="mission_detail.html", context={"mission": mission})
 
 @router.post("/harvest/upload")
 async def upload_harvest(
