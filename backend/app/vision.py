@@ -1,7 +1,8 @@
 import httpx
 import json
 import base64
-from app.config import settings
+import traceback
+from backend.app.config import settings
 from fastapi import HTTPException
 
 async def extract_harvest_data(image_bytes: bytes) -> dict:
@@ -18,18 +19,21 @@ async def extract_harvest_data(image_bytes: bytes) -> dict:
         "images": [image_base64]
     }
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
+    async with httpx.AsyncClient(timeout=120.0) as client:
         try:
             response = await client.post(
-                settings.OLLAMA_API_BASE,
+                f"{settings.OLLAMA_API_BASE}/api/generate",
                 json=payload
             )
             
             if response.status_code != 200:
-                raise HTTPException(status_code=500, detail=f"Ollama error: {response.text}")
+                error_msg = f"Ollama error {response.status_code}: {response.text}"
+                print(f"DEBUG: {error_msg}")
+                raise HTTPException(status_code=500, detail=error_msg)
             
             result = response.json()
             content = result.get("response", "{}")
             return json.loads(content)
         except Exception as e:
+            print(f"DEBUG: {traceback.format_exc()}")
             raise HTTPException(status_code=500, detail=f"Failed to extract data: {str(e)}")

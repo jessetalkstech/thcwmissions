@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from app import db, auth, users, missions, vision
-from app.db import get_db
-from app.schemas import UserCreate, UserRead, MissionRead, ObjectiveRead, ObjectiveCreate, UserMission, HarvestUpdate
+from backend.app import db, auth, users, missions, vision
+from backend.app.db import get_db
+from backend.app.schemas import UserCreate, UserRead, MissionRead, ObjectiveRead, ObjectiveCreate, UserMission, HarvestUpdate
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -10,7 +10,7 @@ from typing import List
 import io
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app.models import Harvest, UserMission, Objective
+from backend.app.models import Harvest, UserMission, Objective
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
@@ -103,7 +103,7 @@ async def index(request: Request, db: AsyncSession = Depends(get_db)):
 @router.get("/dashboard", response_model=HTMLResponse)
 async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
     from sqlalchemy import select
-    from app.models import UserMission
+    from backend.app.models import UserMission
     result = await db.execute(select(UserMission).where(UserMission.status == "Active"))
     active_missions = result.scalars().all()
     return templates.TemplateResponse(request=request, name="dashboard.html", context={"active_missions": active_missions})
@@ -111,7 +111,7 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
 @router.get("/leaderboard", response_model=HTMLResponse)
 async def leaderboard(request: Request, db: AsyncSession = Depends(get_db)):
     from sqlalchemy import select
-    from app.models import User
+    from backend.app.models import User
     res = await db.execute(select(User.username, User.points).order_by(User.points.desc()))
     leaderboard = res.all()
     return templates.TemplateResponse(request=request, name="leaderboard.html", context={"leaderboard": leaderboard})
@@ -134,7 +134,7 @@ async def upload_harvest(
     
     # 3. Get the user's active mission status
     from sqlalchemy import select
-    from app.models import UserMission
+    from backend.app.models import UserMission
     stmt = select(UserMission).where(
         UserMission.user_id == current_user.id,
         UserMission.status == "Active"
@@ -146,7 +146,7 @@ async def upload_harvest(
         raise HTTPException(status_code=400, detail="No active mission found for this user.")
     
     # 4. Create Harvest record with 'Pending' status
-    from app.models import Harvest
+    from backend.app.models import Harvest
     new_harvest = Harvest(
         user_id=current_user.id,
         image_url="placeholder_url",
@@ -192,13 +192,13 @@ async def confirm_harvest(
     harvest_id: int,
     db: AsyncSession = Depends(get_db)
 ):
-    from app.models import Harvest
+    from backend.app.models import Harvest
     harvest = await db.get(Harvest, harvest_id)
     if not harvest:
         raise HTTPException(status_code=404, detail="Harvest not found")
     
     # Find the active mission record associated with this harvest
-    from app.models import UserMission, Objective
+    from backend.app.models import UserMission, Objective
     active_mission_stmt = select(UserMission).where(
         UserMission.user_id == harvest.user_id,
         UserMission.status == "Active"
@@ -231,7 +231,7 @@ async def correct_harvest(
     corrected_data: HarvestUpdate,
     db: AsyncSession = Depends(get_db)
 ):
-    from app.models import Harvest
+    from backend.app.models import Harvest
     harvest = await db.get(Harvest, harvest_id)
     if not harvest:
         raise HTTPException(status_code=404, detail="Harvest not found")
@@ -242,7 +242,7 @@ async def correct_harvest(
         await db.refresh(harvest)
     
     # After correction, we can try to validate automatically
-    from app.models import UserMission, Objective
+    from backend.app.models import UserMission, Objective
     active_mission_stmt = select(UserMission).where(
         UserMission.user_id == harvest.user_id,
         UserMission.status == "Active"

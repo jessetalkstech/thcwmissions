@@ -2,11 +2,11 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends, HTTPException, status
-from app.db import get_db
-from app.models import User
-from app.schemas import UserCreate, UserRead
-from app.auth import hash_password, verify_password, decode_access_token
-from app.config import settings
+from backend.app.db import get_db
+from backend.app.models import User
+from backend.app.schemas import UserCreate, UserRead
+from backend.app.auth import hash_password, verify_password, decode_access_token
+from backend.app.config import settings
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
 
