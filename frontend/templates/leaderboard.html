@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <h2 class="text-3xl font-bold mb-8">Leaderboard</h2>
+
+    <div class="bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
+        <table class="w-full text-left">
+            <thead class="bg-gray-700">
+                <tr>
+                    <th class="p-4">Rank</th>
+                    <th class="p-4">User</th>
+                    <th class="p-4 text-right">Points</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rank, entry in leaderboard %}
+                <tr class="border-b border-gray-700 { 'bg-blue-900/20' if rank == 1 else '' }">
+                    <td class="p-4 font-bold">{{ rank }}</td>
+                    <td class="p-4">{{ entry.username }}</td>
+                    <td class="p-4 text-right">{{ entry.points }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

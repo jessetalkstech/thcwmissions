@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload Harvest</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; padding: 2rem; line-height: 1.6; }
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Upload Harvest</h1>
+    <p>Upload your screenshot to progress your mission.</p>
+    <form action="/harvest/upload" method="post" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="file">Screenshot:</label>
+            <input type="file" name="file" id="file" accept="image/*" required>
+        </div>
+        <button type="submit">Upload & Process</button>
+    </form>
+</body>
+</html>

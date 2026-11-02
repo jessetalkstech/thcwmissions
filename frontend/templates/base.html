@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>thcwmissions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100">
+    <nav class="bg-gray-800 border-b border-gray-700 p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold">thcwmissions</h1>
+            <div class="space-x-4">
+                <a href="/" class="hover:text-blue-400">Dashboard</a>
+                <a href="/leaderboard" class="hover:text-blue-400">Leaderboard</a>
+                <a href="/logout" class="text-red-400">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto mt-8 p-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="mt-auto py-4 text-center text-gray-500 text-sm">
+        &copy; 2026 thcwmissions - Unofficial tracker for theHunter: Call of the Wild
+    </footer>
+</body>
+</html>
