@@ -1,8 +1,8 @@
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db import get_db
-from app.models import Mission, Objective, UserMission, User
-from app.schemas import MissionRead, ObjectiveRead
+from backend.app.db import get_db
+from backend.app.models import Mission, Objective, UserMission, User
+from backend.app.schemas import MissionRead, ObjectiveRead
 from typing import List, Optional
 
 async def create_mission(db: AsyncSession, mission_in: MissionRead) -> Mission:

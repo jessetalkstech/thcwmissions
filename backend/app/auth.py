@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import IsolatedPasswordContext
-from app.config import settings
+from backend.app.config import settings
 
 # Password hashing
 pwd_context = IsolatedPasswordContext(schemes=["bcrypt"])

@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import String, Integer, ForeignKey, JSON
 from sqlalchemy.orm import relationship
-from .db import Base
+from backend.app.db import Base
 
 class Harvest(Base):
     __tablename__ = "harvests"
