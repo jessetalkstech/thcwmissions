@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml poetry.lock* ./
-RUN pip install poetry && poetry config virtualenvs.create false && poetry install --no-dev
+RUN pip install poetry && poetry config virtualenvs.create false && poetry install --only main
 
 COPY . .
 
