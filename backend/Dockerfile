@@ -3,18 +3,20 @@ FROM python:3.12-slim
 WORKDIR /app
 
 # Install system dependencies for psycopg
-RUN apt-get update && apt-get install -y \
-    libpq-dev \
-    gcc \
+RUN apt-get update && apt-get install -y \\\
+    libpq-dev \\\
+    gcc \\\
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the project source
-COPY . .
+# Copy only the dependency files
+COPY pyproject.toml poetry.lock* ./
 
-# Install poetry and dependencies
-RUN pip install --no-cache-dir poetry
-RUN poetry config virtualenvs.create false
-RUN poetry install --no-interaction --no-ansi --only main
+# Install dependencies directly via pip
+# This bypasses the "Invalid statement" error in the poetry install command
+RUN pip install --no-cache-dir --user "fastapi>=0.110.0" "uvicorn>=0.27.0" "sqlalchemy>=2.0.0" "psycopg>=3.1.0" "alembic>=1.13.0" "pydantic-settings>=2.2.0" "httpx>=0.27.0" "python-jose[cryptography]>=3.3.0" "passlib[bcrypt]>=1.7.4"
+
+# Copy the rest of the source
+COPY . .
 
 EXPOSE 8000
 
