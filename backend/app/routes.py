@@ -19,6 +19,15 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 # Initialize Jinja2 templates
 templates = Jinja2Templates(directory="frontend/templates")
 
+async def get_current_active_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)) -> users.User:
+    decoded = auth.decode_access_token(token)
+    if not decoded:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    user = await users.get_user_by_username(db, decoded.get("sub"))
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    return user
+
 # Dependency to check if user is logged in
 async def require_auth(current_user: users.User = Depends(get_current_active_user)):
     return current_user
@@ -30,14 +39,6 @@ async def require_admin(current_user: users.User = Depends(get_current_active_us
     return current_user
 
 # Helper for current user dependency
-async def get_current_active_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)) -> users.User:
-    decoded = auth.decode_access_token(token)
-    if not decoded:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    user = await users.get_user_by_username(db, decoded.get("sub"))
-    if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-    return user
 
 @router.post("/auth/register", response_model=UserRead)
 async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
