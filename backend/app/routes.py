@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile,
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app import db, auth, users, missions, vision
 from backend.app.db import get_db
-from backend.app.schemas import UserCreate, UserRead, MissionRead, ObjectiveRead, ObjectiveCreate, UserMission, HarvestUpdate
+from backend.app.schemas import UserCreate, UserRead, MissionRead, ObjectiveRead, ObjectiveCreate, UserMission as UserMissionSchema, HarvestUpdate
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -57,7 +57,7 @@ async def create_mission(mission_in: MissionRead, db: AsyncSession = Depends(get
 async def create_objective(mission_id: int, objective_in: ObjectiveCreate, db: AsyncSession = Depends(get_db)):
     return await missions.create_objective(db, mission_id, objective_in)
 
-@router.post("/missions/{mission_id}/start", response_model=UserMission)
+@router.post("/missions/{mission_id}/start", response_model=UserMissionSchema)
 async def start_mission(mission_id: int, current_user: users.User = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
     # Check if mission already has active user mission
     stmt = select(UserMission).where(UserMission.mission_id == mission_id, UserMission.status == "Active")
