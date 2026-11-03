@@ -37,7 +37,7 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - ./backend:/app
+      - ./backend:/app/backend
       - ./frontend:/app/frontend
 
 volumes:
