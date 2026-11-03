@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     OLLAMA_API_BASE: str
     OLLAMA_MODEL_NAME: str
     SECRET_KEY: str
+    ALGORITHM: str = "HS256"
     APP_ENV: str = "development"
     LOG_LEVEL: str = "INFO"
     ALLOWED_HOSTS: List[str] = ["*"]
