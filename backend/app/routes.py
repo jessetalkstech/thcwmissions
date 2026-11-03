@@ -40,6 +40,18 @@ async def require_admin(current_user: users.User = Depends(get_current_active_us
 
 # Helper for current user dependency
 
+@router.get("/login")
+async def login_page():
+    return HTMLResponse(content="""
+    <html>
+        <head><title>Login</title></head>
+        <body>
+            <h1>Login</h1>
+            <p>Please log in to access the tracker.</p>
+        </body>
+    </html>
+    """)
+
 @router.post("/auth/register", response_model=UserRead)
 async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
     existing_user = await users.get_user_by_username(db, user_in.username)
