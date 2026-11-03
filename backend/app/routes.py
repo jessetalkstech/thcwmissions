@@ -119,10 +119,12 @@ async def complete_objective(user_mission_id: int, db: AsyncSession = Depends(ge
 
 @router.get("/")
 async def index(request: Request, db: AsyncSession = Depends(get_db)):
+    print(f"DEBUG: Accessing root URL via {request.method} {request.url.path}")
     try:
         await get_current_active_user(db)
         return await dashboard(request, db)
     except HTTPException as e:
+        print(f"DEBUG: Caught exception: {e.status_code}")
         if e.status_code == status.HTTP_401_UNAUTHORIZED:
             return RedirectResponse(url="/login")
         raise e
