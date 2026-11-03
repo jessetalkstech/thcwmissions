@@ -9,9 +9,10 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml poetry.lock* ./
-RUN python -m pip install --no-cache-dir poetry
+RUN pip install --no-cache-dir poetry
 RUN poetry config virtualenvs.create false
-RUN poetry install --no-interaction --no-ansi --only main
+RUN pip install .
+
 
 COPY . .
 
