@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Request
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Request, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app import db, auth, users, missions, vision
 from backend.app.db import get_db
@@ -43,17 +43,64 @@ async def require_admin(current_user: users.User = Depends(get_current_active_us
 @router.get("/login")
 async def login_page():
     return HTMLResponse(content="""
-    <html>
-        <head><title>Login</title></head>
+    <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Login - THCW Missions</title>
+            <style>
+                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f4f4f9; }
+                .login-container { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+                h1 { margin-bottom: 1.5rem; text-align: center; color: #333; }
+                .form-group { margin-bottom: 1rem; }
+                label { display: block; margin-bottom: 0.5rem; color: #666; }
+                input { width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+                button { width: 100%; padding: 0.75rem; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; }
+                button:hover { background-color: #0056b3; }
+                .toggle-form { text-align: center; margin-top: 1rem; }
+                .toggle-form a { color: #007bff; text-decoration: none; }
+            </style>
+        </head>
         <body>
-            <h1>Login</h1>
-            <p>Please log in to access the tracker.</p>
+            <div class="login-container">
+                <h1 id="form-title">Login</h1>
+                <form id="auth-form" action="/auth/login" method="POST">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+                    <button type="submit">Login</button>
+                </form>
+                <div class="toggle-form">
+                    <p>Don't have an account? <a href="#" onclick="toggleForm()">Register here</a></p>
+                </div>
+            </div>
+            <script>
+                function toggleForm() {
+                    const form = document.getElementById('auth-form');
+                    const title = document.getElementById('form-title');
+                    const isLogin = form.action.includes('/auth/login');
+                    
+                    if (isLogin) {
+                        form.action = '/auth/register';
+                        title.innerText = 'Register';
+                    } else {
+                        form.action = '/auth/login';
+                        title.innerText = 'Login';
+                    }
+                }
+            </script>
         </body>
     </html>
     """)
 
 @router.post("/auth/register", response_model=UserRead)
-async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
+async def register(username: str = Form(...), password: str = Form(...), db: AsyncSession = Depends(get_db)):
+    user_in = UserCreate(username=username, password=password)
     existing_user = await users.get_user_by_username(db, user_in.username)
     if existing_user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already registered")
@@ -61,7 +108,8 @@ async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
     return user
 
 @router.post("/auth/login")
-async def login(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
+async def login(username: str = Form(...), password: str = Form(...), db: AsyncSession = Depends(get_db)):
+    user_in = UserCreate(username=username, password=password)
     user = await users.get_user_by_username(db, user_in.username)
     if not user or not auth.verify_password(user_in.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
