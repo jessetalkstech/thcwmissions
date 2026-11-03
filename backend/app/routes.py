@@ -118,16 +118,9 @@ async def complete_objective(user_mission_id: int, db: AsyncSession = Depends(ge
     return {"status": "success", "current_objective_id": result.current_objective_id, "status": result.status}
 
 @router.get("/")
-async def index(request: Request, current_user: users.User = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
+async def index(request: Request, db: AsyncSession = Depends(get_db)):
     print(f"DEBUG: Accessing root URL via {request.method} {request.url.path}")
-    try:
-        # No need to manually call get_current_active_user anymore as it's a dependency
-        return await dashboard(request, db)
-    except HTTPException as e:
-        print(f"DEBUG: Caught exception: {e.status_code}")
-        if e.status_code == status.HTTP_401_UNAUTHORIZED:
-            return RedirectResponse(url="/login")
-        raise e
+    return RedirectResponse(url="/login")
 
 @router.get("/dashboard")
 async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
