@@ -19,6 +19,10 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 # Initialize Jinja2 templates
 templates = Jinja2Templates(directory="frontend/templates")
 
+@router.get("/")
+async def redirect_to_login():
+    return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
+
 async def get_current_active_user(request: Request, db: AsyncSession = Depends(get_db)) -> users.User:
     token = request.cookies.get("access_token")
     if not token:
@@ -28,7 +32,7 @@ async def get_current_active_user(request: Request, db: AsyncSession = Depends(g
             
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication token missing")
-
+    
     decoded = auth.decode_access_token(token)
     if not decoded:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
@@ -92,22 +96,22 @@ async def login_page(request: Request):
                 </div>
             </div>
             <script>
-                function toggleForm() {{
+                function toggleForm() {
                     const form = document.getElementById('auth-form');
                     const title = document.getElementById('form-title');
                     const btn = document.getElementById('submit-btn');
                     const isLogin = form.action.includes('/auth/login');
                     
-                    if (isLogin) {{
+                    if (isLogin) {
                         form.action = '/auth/register';
                         title.innerText = 'Register';
                         btn.innerText = 'Register';
-                    }} else {{
+                    } else {
                         form.action = '/auth/login';
                         title.innerText = 'Login';
                         btn.innerText = 'Login';
-                    }}
-                }}
+                    }
+                }
             </script>
         </body>
     </html>
@@ -200,28 +204,28 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
     # Get active missions for the current user
     result = await db.execute(select(UserMission).where(UserMission.status == "Active"))
     active_missions = result.scalars().all()
-
+    
     # Helper to map UserMission records to a dictionary with progress and mission data
     mission_data = []
     active_ids = set()
     for um in active_missions:
         active_ids.add(um.mission_id)
-
+        
         m_stmt = select(Mission).where(Mission.id == um.mission_id)
         m_res = await db.execute(m_stmt)
         mission = m_res.scalars().first()
-
+        
         o_stmt = select(Objective).where(Objective.mission_id == um.mission_id).order_by(Objective.order_index.asc())
         o_res = await db.execute(o_stmt)
         objectives = o_res.scalars().all()
-
+        
         current_obj_index = -1
         if um.current_objective_id:
             for i, obj in enumerate(objectives):
                 if obj.id == um.current_objective_id:
                     current_obj_index = i
                     break
-
+        
         progress = 0
         if objectives:
             if current_obj_index >= 0:
@@ -230,7 +234,7 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
                 progress = 0
         else:
             progress = 100
-
+        
         mission_data.append({
             "id": um.id,
             "title": mission.title,
@@ -239,12 +243,12 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
             "progress": round(progress),
             "mission": mission
         })
-
+    
     # Get all missions, excluding those currently active for the user
     all_missions_stmt = select(Mission)
     all_missions_res = await db.execute(all_missions_stmt)
     all_missions = all_missions_res.scalars().all()
-
+    
     available_missions = []
     for m in all_missions:
         if m.id not in active_ids:
@@ -254,7 +258,7 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
                 "description": m.description,
                 "base_points": m.base_points
             })
-
+    
     return templates.TemplateResponse(request=request, name="dashboard.html", context={
         "active_missions": mission_data,
         "available_missions": available_missions
