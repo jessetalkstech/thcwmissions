@@ -96,11 +96,11 @@ async def complete_objective(user_mission_id: int, db: AsyncSession = Depends(ge
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User mission not found or not active")
     return {"status": "success", "current_objective_id": result.current_objective_id, "status": result.status}
 
-@router.get("/", response_model=HTMLResponse)
+@router.get("/")
 async def index(request: Request, db: AsyncSession = Depends(get_db)):
     return await dashboard(request, db)
 
-@router.get("/dashboard", response_model=HTMLResponse)
+@router.get("/dashboard")
 async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
     from sqlalchemy import select
     from backend.app.models import UserMission
@@ -153,7 +153,7 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
         
     return templates.TemplateResponse(request=request, name="dashboard.html", context={"active_missions": mission_data})
 
-@router.get("/leaderboard", response_model=HTMLResponse)
+@router.get("/leaderboard")
 async def leaderboard(request: Request, db: AsyncSession = Depends(get_db)):
     from sqlalchemy import select
     from backend.app.models import User
@@ -161,7 +161,7 @@ async def leaderboard(request: Request, db: AsyncSession = Depends(get_db)):
     leaderboard = res.all()
     return templates.TemplateResponse(request=request, name="leaderboard.html", context={"leaderboard": leaderboard})
 
-@router.get("/mission/{mission_id}", response_model=HTMLResponse)
+@router.get("/mission/{mission_id}")
 async def mission_detail(request: Request, mission_id: int, db: AsyncSession = Depends(get_db)):
     from sqlalchemy import select
     from backend.app.models import Mission
