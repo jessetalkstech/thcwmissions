@@ -41,29 +41,32 @@ async def require_admin(current_user: users.User = Depends(get_current_active_us
 # Helper for current user dependency
 
 @router.get("/login")
-async def login_page():
-    return HTMLResponse(content="""
+async def login_page(request: Request):
+    error = request.query_params.get("error")
+    return HTMLResponse(content=f"""
     <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Login - THCW Missions</title>
             <style>
-                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f4f4f9; }
-                .login-container { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
-                h1 { margin-bottom: 1.5rem; text-align: center; color: #333; }
-                .form-group { margin-bottom: 1rem; }
-                label { display: block; margin-bottom: 0.5rem; color: #666; }
-                input { width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-                button { width: 100%; padding: 0.75rem; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; }
-                button:hover { background-color: #0056b3; }
-                .toggle-form { text-align: center; margin-top: 1rem; }
-                .toggle-form a { color: #007bff; text-decoration: none; }
+                body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f4f4f9; }}
+                .login-container {{ background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }}
+                h1 {{ margin-bottom: 1.5rem; text-align: center; color: #333; }}
+                .form-group {{ margin-bottom: 1rem; }}
+                label {{ display: block; margin-bottom: 0.5rem; color: #666; }}
+                input {{ width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }}
+                button {{ width: 100%; padding: 0.75rem; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; }}
+                button:hover {{ background-color: #0056b3; }}
+                .toggle-form {{ text-align: center; margin-top: 1rem; }}
+                .toggle-form a {{ color: #007bff; text-decoration: none; }}
+                .error-message {{ color: red; margin-bottom: 1rem; text-align: center; font-weight: bold; }}
             </style>
         </head>
         <body>
             <div class="login-container">
                 <h1 id="form-title">Login</h1>
+                {f'<div class="error-message">{error}</div>' if error else ''}
                 <form id="auth-form" action="/auth/login" method="POST">
                     <div class="form-group">
                         <label for="username">Username</label>
@@ -80,22 +83,22 @@ async def login_page():
                 </div>
             </div>
             <script>
-                function toggleForm() {
+                function toggleForm() {{
                     const form = document.getElementById('auth-form');
                     const title = document.getElementById('form-title');
                     const btn = document.getElementById('submit-btn');
                     const isLogin = form.action.includes('/auth/login');
                     
-                    if (isLogin) {
+                    if (isLogin) {{
                         form.action = '/auth/register';
                         title.innerText = 'Register';
                         btn.innerText = 'Register';
-                    } else {
+                    }} else {{
                         form.action = '/auth/login';
                         title.innerText = 'Login';
                         btn.innerText = 'Login';
-                    }
-                }
+                    }}
+                }}
             </script>
         </body>
     </html>
@@ -106,7 +109,7 @@ async def register(username: str = Form(...), password: str = Form(...), db: Asy
     user_in = UserCreate(username=username, password=password)
     existing_user = await users.get_user_by_username(db, user_in.username)
     if existing_user:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already registered")
+        return RedirectResponse(url=f"/login?error=Username%20already%20registered", status_code=status.HTTP_303_SEE_OTHER)
     user = await users.create_user(db, user_in)
     return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
 
