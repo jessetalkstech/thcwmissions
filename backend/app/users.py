@@ -32,7 +32,18 @@ async def get_current_user(db: AsyncSession = Depends(get_db), token: str = Depe
 
 async def create_user(db: AsyncSession, user_in: UserCreate) -> User:
     hashed_pw = hash_password(user_in.password)
-    new_user = User(username=user_in.username, hashed_password=hashed_pw)
+    
+    # Determine if this is the first user (make them admin)
+    user_count_stmt = select(User)
+    user_count_res = await db.execute(user_count_stmt)
+    users_list = user_count_res.scalars().all()
+    is_first_user = len(users_list) == 0
+    
+    new_user = User(
+        username=user_in.username, 
+        hashed_password=hashed_pw, 
+        is_admin=is_first_user
+    )
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)

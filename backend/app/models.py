@@ -19,6 +19,7 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     points: Mapped[int] = mapped_column(default=0)
+    is_admin: Mapped[bool] = mapped_column(default=False)
     missions: Mapped[list["UserMission"]] = relationship("UserMission", back_populates="user")
     harvests: Mapped[list["Harvest"]] = relationship("Harvest", back_populates="user")
 

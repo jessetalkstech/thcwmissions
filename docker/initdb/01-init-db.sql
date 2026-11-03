@@ -29,7 +29,8 @@ CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     username TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    points INTEGER DEFAULT 0
+    points INTEGER DEFAULT 0,
+    is_admin BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE missions (

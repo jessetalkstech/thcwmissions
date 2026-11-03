@@ -4,19 +4,30 @@ from backend.app import db, auth, users, missions, vision
 from backend.app.db import get_db
 from backend.app.schemas import UserCreate, UserRead, MissionRead, ObjectiveRead, ObjectiveCreate, UserMission as UserMissionSchema, HarvestUpdate
 from fastapi.security import OAuth2PasswordBearer
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from typing import List
 import io
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from backend.app.models import Harvest, UserMission, Objective
+from backend.app.models import Harvest, UserMission, Objective, Mission
+import json
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 # Initialize Jinja2 templates
 templates = Jinja2Templates(directory="frontend/templates")
+
+# Dependency to check if user is logged in
+async def require_auth(current_user: users.User = Depends(get_current_active_user)):
+    return current_user
+
+# Dependency to check if user is admin
+async def require_admin(current_user: users.User = Depends(get_current_active_user)):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required")
+    return current_user
 
 # Helper for current user dependency
 async def get_current_active_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)) -> users.User:
@@ -59,13 +70,11 @@ async def create_objective(mission_id: int, objective_in: ObjectiveCreate, db: A
 
 @router.post("/missions/{mission_id}/start", response_model=UserMissionSchema)
 async def start_mission(mission_id: int, current_user: users.User = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
-    # Check if mission already has active user mission
     stmt = select(UserMission).where(UserMission.mission_id == mission_id, UserMission.status == "Active")
     res = await db.execute(stmt)
     if res.scalars().first():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mission already active for a user.")
     
-    # Get first objective
     obj_stmt = select(Objective).where(Objective.mission_id == mission_id).order_by(Objective.order_index.asc()).limit(1)
     obj_res = await db.execute(obj_stmt)
     first_obj = obj_res.scalars().first()
@@ -73,7 +82,6 @@ async def start_mission(mission_id: int, current_user: users.User = Depends(get_
     if not first_obj:
         raise HTTPException(status_code=404, detail="Mission has no objectives.")
     
-    # Create user mission record
     new_um = UserMission(
         user_id=current_user.id,
         mission_id=mission_id,
@@ -98,23 +106,21 @@ async def complete_objective(user_mission_id: int, db: AsyncSession = Depends(ge
 
 @router.get("/")
 async def index(request: Request, db: AsyncSession = Depends(get_db)):
-    return await dashboard(request, db)
+    try:
+        await get_current_active_user(db)
+        return await dashboard(request, db)
+    except HTTPException as e:
+        if e.status_code == status.HTTP_401_UNAUTHORIZED:
+            return RedirectResponse(url="/login")
+        raise e
 
 @router.get("/dashboard")
 async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
-    from sqlalchemy import select
-    from backend.app.models import UserMission
     result = await db.execute(select(UserMission).where(UserMission.status == "Active"))
     active_missions = result.scalars().all()
     
-    # To calculate progress, we might need a bit more info, but let's try to do it simply.
-    # Actually, we can just pass the objectives list for each mission_record.
-    
     mission_data = []
     for um in active_missions:
-        from sqlalchemy import select
-        from backend.app.models import Mission, Objective
-        
         m_stmt = select(Mission).where(Mission.id == um.mission_id)
         m_res = await db.execute(m_stmt)
         mission = m_res.scalars().first()
@@ -123,7 +129,6 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
         o_res = await db.execute(o_stmt)
         objectives = o_res.scalars().all()
         
-        # Find current objective index
         current_obj_index = -1
         if um.current_objective_id:
             for i, obj in enumerate(objectives):
@@ -131,14 +136,12 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
                     current_obj_index = i
                     break
         
-        # Calculate progress percentage
+        progress = 0
         if objectives:
-            # If objective index is 0, progress is 0% of the way through? 
-            # Or is it (index + 1) / total?
-            # Let's say if it's the first objective, progress is 0% (just started).
-            # If it's the last objective, progress is 100%? No, usually it's finished after completing last.
-            # Let's use (current_obj_index / len(objectives)) * 100
-            progress = (current_obj_index / len(objectives)) * 100
+            if current_obj_index >= 0:
+                progress = ((current_obj_index + 1) / len(objectives)) * 100
+            else:
+                progress = 0
         else:
             progress = 100
             
@@ -150,7 +153,7 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
             "progress": round(progress),
             "mission": mission
         })
-        
+    
     return templates.TemplateResponse(request=request, name="dashboard.html", context={"active_missions": mission_data})
 
 @router.get("/leaderboard")
@@ -163,14 +166,11 @@ async def leaderboard(request: Request, db: AsyncSession = Depends(get_db)):
 
 @router.get("/mission/{mission_id}")
 async def mission_detail(request: Request, mission_id: int, db: AsyncSession = Depends(get_db)):
-    from sqlalchemy import select
-    from backend.app.models import Mission
     stmt = select(Mission).where(Mission.id == mission_id)
     res = await db.execute(stmt)
     mission = res.scalars().first()
     if not mission:
         raise HTTPException(status_code=404, detail="Mission not found")
-
     return templates.TemplateResponse(request=request, name="mission_detail.html", context={"mission": mission})
 
 @router.post("/harvest/upload")
@@ -179,15 +179,8 @@ async def upload_harvest(
     current_user: users.User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
-    # 1. Read file bytes
     content = await file.read()
-    
-    # 2. Extract data via Vision
     harvest_data = await vision.extract_harvest_data(content)
-    
-    # 3. Get the user's active mission status
-    from sqlalchemy import select
-    from backend.app.models import UserMission
     stmt = select(UserMission).where(
         UserMission.user_id == current_user.id,
         UserMission.status == "Active"
@@ -198,8 +191,6 @@ async def upload_harvest(
     if not active_mission_record:
         raise HTTPException(status_code=400, detail="No active mission found for this user.")
     
-    # 4. Create Harvest record with 'Pending' status
-    from backend.app.models import Harvest
     new_harvest = Harvest(
         user_id=current_user.id,
         image_url="placeholder_url",
@@ -210,7 +201,6 @@ async def upload_harvest(
     await db.commit()
     await db.refresh(new_harvest)
     
-    # 5. Return summary for user confirmation
     return {
         "status": "summary_ready",
         "harvest_id": new_harvest.id,
@@ -245,13 +235,10 @@ async def confirm_harvest(
     harvest_id: int,
     db: AsyncSession = Depends(get_db)
 ):
-    from backend.app.models import Harvest
     harvest = await db.get(Harvest, harvest_id)
     if not harvest:
         raise HTTPException(status_code=404, detail="Harvest not found")
     
-    # Find the active mission record associated with this harvest
-    from backend.app.models import UserMission, Objective
     active_mission_stmt = select(UserMission).where(
         UserMission.user_id == harvest.user_id,
         UserMission.status == "Active"
@@ -269,7 +256,6 @@ async def confirm_harvest(
     if not objective:
         raise HTTPException(status_code=400, detail="Active mission has no current objective.")
     
-    # Use the logic from missions.py
     is_valid = await missions.validate_harvest(harvest.extracted_data, objective)
     
     if is_valid:
@@ -284,7 +270,6 @@ async def correct_harvest(
     corrected_data: HarvestUpdate,
     db: AsyncSession = Depends(get_db)
 ):
-    from backend.app.models import Harvest
     harvest = await db.get(Harvest, harvest_id)
     if not harvest:
         raise HTTPException(status_code=404, detail="Harvest not found")
@@ -294,8 +279,6 @@ async def correct_harvest(
         await db.commit()
         await db.refresh(harvest)
     
-    # After correction, we can try to validate automatically
-    from backend.app.models import UserMission, Objective
     active_mission_stmt = select(UserMission).where(
         UserMission.user_id == harvest.user_id,
         UserMission.status == "Active"
@@ -315,3 +298,69 @@ async def correct_harvest(
                 return {"status": "success", "message": f"Corrected information validated and objective '{objective.description}' completed!"}
     
     return {"status": "corrected", "message": "Harvest data updated successfully."}
+
+@router.get("/admin/missions", response_model=List[MissionRead])
+async def admin_list_missions(db: AsyncSession = Depends(get_db), _ = Depends(require_admin)):
+    res = await db.execute(select(Mission))
+    return res.scalars().all()
+
+@router.post("/admin/missions", response_model=MissionRead)
+async def admin_create_mission(mission_in: MissionRead, db: AsyncSession = Depends(get_db), _ = Depends(require_admin)):
+    mission = Mission(**mission_in.dict(exclude={"id"}))
+    db.add(mission)
+    await db.commit()
+    await db.refresh(mission)
+    return mission
+
+@router.put("/admin/missions/{mission_id}", response_model=MissionRead)
+async def admin_update_mission(mission_id: int, mission_in: MissionRead, db: AsyncSession = Depends(get_db), _ = Depends(require_admin)):
+    mission = await db.get(Mission, mission_id)
+    if not mission:
+        raise HTTPException(status_code=404, detail="Mission not found")
+    for key, value in mission_in.dict(exclude={"id"}).items():
+        setattr(mission, key, value)
+    await db.commit()
+    await db.refresh(mission)
+    return mission
+
+@router.delete("/admin/missions/{mission_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def admin_delete_mission(mission_id: int, db: AsyncSession = Depends(get_db), _ = Depends(require_admin)):
+    mission = await db.get(Mission, mission_id)
+    if not mission:
+        raise HTTPException(status_code=404, detail="Mission not found")
+    await db.delete(mission)
+    await db.commit()
+    return None
+
+@router.get("/admin/objectives", response_model=List[ObjectiveRead])
+async def admin_list_objectives(db: AsyncSession = Depends(get_db), _ = Depends(require_admin)):
+    res = await db.execute(select(Objective))
+    return res.scalars().all()
+
+@router.post("/admin/objectives", response_model=ObjectiveRead)
+async def admin_create_objective(objective_in: ObjectiveCreate, db: AsyncSession = Depends(get_db), _ = Depends(require_admin)):
+    objective = Objective(**objective_in.dict())
+    db.add(objective)
+    await db.commit()
+    await db.refresh(objective)
+    return objective
+
+@router.put("/admin/objectives/{objective_id}", response_model=ObjectiveRead)
+async def admin_update_objective(objective_id: int, objective_in: ObjectiveCreate, db: AsyncSession = Depends(get_db), _ = Depends(require_admin)):
+    objective = await db.get(Objective, objective_id)
+    if not objective:
+        raise HTTPException(status_code=404, detail="Objective not found")
+    for key, value in objective_in.dict().items():
+        setattr(objective, key, value)
+    await db.commit()
+    await db.refresh(objective)
+    return objective
+
+@router.delete("/admin/objectives/{objective_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def admin_delete_objective(objective_id: int, db: AsyncSession = Depends(get_db), _ = Depends(require_admin)):
+    objective = await db.get(Objective, objective_id)
+    if not objective:
+        raise HTTPException(status_code=404, detail="Objective not found")
+    await db.delete(objective)
+    await db.commit()
+    return None
