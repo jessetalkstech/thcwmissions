@@ -73,7 +73,7 @@ async def login_page():
                         <label for="password">Password</label>
                         <input type="password" id="password" name="password" required>
                     </div>
-                    <button type="submit">Login</button>
+                    <button type="submit" id="submit-btn">Login</button>
                 </form>
                 <div class="toggle-form">
                     <p>Don't have an account? <a href="#" onclick="toggleForm()">Register here</a></p>
@@ -83,14 +83,17 @@ async def login_page():
                 function toggleForm() {
                     const form = document.getElementById('auth-form');
                     const title = document.getElementById('form-title');
+                    const btn = document.getElementById('submit-btn');
                     const isLogin = form.action.includes('/auth/login');
                     
                     if (isLogin) {
                         form.action = '/auth/register';
                         title.innerText = 'Register';
+                        btn.innerText = 'Register';
                     } else {
                         form.action = '/auth/login';
                         title.innerText = 'Login';
+                        btn.innerText = 'Login';
                     }
                 }
             </script>
@@ -98,14 +101,14 @@ async def login_page():
     </html>
     """)
 
-@router.post("/auth/register", response_model=UserRead)
+@router.post("/auth/register", status_code=status.HTTP_303_SEE_OTHER)
 async def register(username: str = Form(...), password: str = Form(...), db: AsyncSession = Depends(get_db)):
     user_in = UserCreate(username=username, password=password)
     existing_user = await users.get_user_by_username(db, user_in.username)
     if existing_user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already registered")
     user = await users.create_user(db, user_in)
-    return user
+    return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
 
 @router.post("/auth/login")
 async def login(username: str = Form(...), password: str = Form(...), db: AsyncSession = Depends(get_db)):
