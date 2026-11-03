@@ -23,4 +23,6 @@
     </div>
     {% endfor %}
 </div>
-{% endblock %}
+\n    <div class="mt-12">\n        <h2 class="text-3xl font-bold mb-4">Available Missions</h2>\n        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">\n            {% for mission in available_missions %}\n            <div class="bg-gray-800 p-6 rounded-lg border border-gray-700">\n                <h3 class="text-xl font-bold mb-2">{{ mission.title }}</h3>\n                <p class="text-gray-400 mb-4">{{ mission.description | truncate(100) }}</p>\n                <p class="mb-4"><strong>Base Points:</strong> {{ mission.base_points }}</p>\n                <a href="/mission/{{ mission.id }}" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm">Start Mission</a>\n            </div>\
+        {% endfor %}\n        </div>\
+</div\>

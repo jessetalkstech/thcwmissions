@@ -197,26 +197,31 @@ async def logout():
 
 @router.get("/dashboard")
 async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
+    # Get active missions for the current user
     result = await db.execute(select(UserMission).where(UserMission.status == "Active"))
     active_missions = result.scalars().all()
-    
+
+    # Helper to map UserMission records to a dictionary with progress and mission data
     mission_data = []
+    active_ids = set()
     for um in active_missions:
+        active_ids.add(um.mission_id)
+
         m_stmt = select(Mission).where(Mission.id == um.mission_id)
         m_res = await db.execute(m_stmt)
         mission = m_res.scalars().first()
-        
+
         o_stmt = select(Objective).where(Objective.mission_id == um.mission_id).order_by(Objective.order_index.asc())
         o_res = await db.execute(o_stmt)
         objectives = o_res.scalars().all()
-        
+
         current_obj_index = -1
         if um.current_objective_id:
             for i, obj in enumerate(objectives):
                 if obj.id == um.current_objective_id:
                     current_obj_index = i
                     break
-        
+
         progress = 0
         if objectives:
             if current_obj_index >= 0:
@@ -225,7 +230,7 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
                 progress = 0
         else:
             progress = 100
-            
+
         mission_data.append({
             "id": um.id,
             "title": mission.title,
@@ -234,8 +239,26 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
             "progress": round(progress),
             "mission": mission
         })
-    
-    return templates.TemplateResponse(request=request, name="dashboard.html", context={"active_missions": mission_data})
+
+    # Get all missions, excluding those currently active for the user
+    all_missions_stmt = select(Mission)
+    all_missions_res = await db.execute(all_missions_stmt)
+    all_missions = all_missions_res.scalars().all()
+
+    available_missions = []
+    for m in all_missions:
+        if m.id not in active_ids:
+            available_missions.append({
+                "id": m.id,
+                "title": m.title,
+                "description": m.description,
+                "base_points": m.base_points
+            })
+
+    return templates.TemplateResponse(request=request, name="dashboard.html", context={
+        "active_missions": mission_data,
+        "available_missions": available_missions
+    })
 
 @router.get("/leaderboard")
 async def leaderboard(request: Request, db: AsyncSession = Depends(get_db)):
