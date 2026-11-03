@@ -189,10 +189,11 @@ async def complete_objective(user_mission_id: int, db: AsyncSession = Depends(ge
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User mission not found or not active")
     return {"status": "success", "current_objective_id": result.current_objective_id, "status": result.status}
 
-@router.get("/")
-async def index(request: Request, db: AsyncSession = Depends(get_db)):
-    print(f"DEBUG: Accessing root URL via {request.method} {request.url.path}")
-    return RedirectResponse(url="/login")
+@router.get("/logout")
+async def logout():
+    response = RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
+    response.delete_cookie("access_token")
+    return response
 
 @router.get("/dashboard")
 async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
