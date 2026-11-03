@@ -19,7 +19,16 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 # Initialize Jinja2 templates
 templates = Jinja2Templates(directory="frontend/templates")
 
-async def get_current_active_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)) -> users.User:
+async def get_current_active_user(request: Request, db: AsyncSession = Depends(get_db)) -> users.User:
+    token = request.cookies.get("access_token")
+    if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+            
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication token missing")
+
     decoded = auth.decode_access_token(token)
     if not decoded:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
@@ -114,14 +123,23 @@ async def register(username: str = Form(...), password: str = Form(...), db: Asy
     return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
 
 @router.post("/auth/login")
-async def login(username: str = Form(...), password: str = Form(...), db: AsyncSession = Depends(get_db)):
+async def login(request: Request, username: str = Form(...), password: str = Form(...), db: AsyncSession = Depends(get_db)):
     user_in = UserCreate(username=username, password=password)
     user = await users.get_user_by_username(db, user_in.username)
     if not user or not auth.verify_password(user_in.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     
     token = auth.create_access_token(data={"sub": user.username})
-    return {"access_token": token, "token_type": "bearer"}
+    response = RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        max_age=900,  # 15 minutes
+        samesite="lax",
+        secure=False,  # Set to False for local development without HTTPS
+    )
+    return response
 
 @router.get("/missions", response_model=List[MissionRead])
 async def list_missions(db: AsyncSession = Depends(get_db)):
